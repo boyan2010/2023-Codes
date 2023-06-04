@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Local Server</title>
+    <script>
+        let canvas,context,img;
+        function onBodyLoad(){
+            canvas=document.getElementById("my-canvas");
+            img = new Image();
+            img.src='./'+prompt("Kakva kartinka iskash???(farm.png,cursor.png,capybara.jpg,capybara2.jpg,cookie.png,rgb_table.png)");
+            context=canvas.getContext("2d");
+            let old_rgba_arr=[];
+            let new_rgba_arr=[];
+            function getLog(x,y){
+                return Math.log(y)/Math.log(x);
+            }
+            function negative(r,g,b,a){
+                let obj={
+                    r: 255-r,
+                    g: 255-g,
+                    b: 255-b,
+                    a: a
+                }
+                return obj;
+            }
+            function grayScale(r,g,b,a){
+                let sredno=Math.floor((r+g+b)/3)
+                let obj={
+                    r: sredno,
+                    g: sredno,
+                    b: sredno,
+                    a: a
+                }
+                return obj;
+            }
+            function blur(r,g,b,a,index){
+                let obj;
+                let nr=0,ng=0,nb=0;
+                let pixelB=200;
+                for(let j=index;j<index+pixelB*4;j+=4){
+                        if(j>=800*600*4){
+                            break;
+                        }
+                        nr+=old_rgba_arr[j];
+                        ng+=old_rgba_arr[j+1];
+                        nb+=old_rgba_arr[j+2];
+                }
+                //console.log(nr);
+                nr/=pixelB;
+                ng/=pixelB;
+                nb/=pixelB;
+                obj={
+                    r:Math.floor(nr),
+                    g:Math.floor(ng),
+                    b:Math.floor(nb),
+                    a:a
+                }
+                return obj;
+            }
+            function dithering(r,g,b,a){
+                let brNad127=0;
+                let obj;
+                if(r>127){
+                    brNad127++;
+                }
+                if(g>127){
+                    brNad127++;
+                }
+                if(b>127){
+                    brNad127++;
+                }
+                if(brNad127>=2){
+                     obj={
+                        r:0,
+                        g:0,
+                        b:0,
+                        a:a
+                    }
+                }else{
+                     obj={
+                        r:255,
+                        g:255,
+                        b:255,
+                        a:a
+                    }
+                }
+                return obj;
+            }
+            function dithering2(e,r,g,b,a){
+                let obj;
+                
+                let gray=Math.floor((r+g+b)/3)
+                e+=gray;
+                if(e<127){
+                    obj={
+                        r:0,
+                        g:0,
+                        b:0,
+                        a:a,
+                        e:e
+                    };
+                }else{
+                    obj={
+                        r:255,
+                        g:255,
+                        b:255,
+                        a:255,
+                        e:e
+                    }
+                }
+                return obj;
+            }
+            function dominantColour(r,g,b,a){
+                let obj;
+                if(r>g && r>b){
+                    obj={
+                        r:r,
+                        g:0,
+                        b:0,
+                        a:a
+                    };
+                }else if(g>r && g>b){
+                    obj={
+                        r:0,
+                        g:g,
+                        b:0,
+                        a:a
+                    };
+                }else{
+                    obj={
+                        r:0,
+                        g:0,
+                        b:b,
+                        a:a
+                    };
+                }
+                return obj;
+            }
+            function distance(x1,x2,y1,y2){
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+
+            function vignette(r,g,b,a,index) {
+                index/=4;
+                let obj;
+                let d=distance(400,index%800,300,Math.floor(index/800))/100+1;
+                obj={
+                    r:Math.floor(r/d),
+                    g:Math.floor(g/d),
+                    b:Math.floor(b/d),
+                    a:a
+                }
+                return obj;
+            }
+            function posterize(r,g,b,a){
+                let obj;
+                //How many values do you want r, g, b to have without including 0
+                let amColours=6;
+                let n=Math.floor(255/amColours);//127
+            //    console.log(n);
+                if(r%n!=0){
+                    r+=n-r%n;
+                }
+                if(g%n!=0){
+                    g+=n-g%n;
+                }
+                if(b%n!=0){
+                    b+=n-b%n;
+                }
+                if(r>255){
+                    r=255;
+                }
+                if(g>255){
+                    g=255;
+                }
+                if(b>255){
+                    b=255;
+                }
+                obj={
+                    r:r,
+                    g:g,
+                    b:b,
+                    a:a
+                }
+                return obj;
+            }
+            img.onload = function (){
+                context.drawImage(img,0,0,800,600);
+                let old_data=context.getImageData(0,0,800,600);
+                 old_rgba_arr=old_data.data;
+                // new_rgba_arr=[];
+                let error=Math.floor((old_rgba_arr[0]+old_rgba_arr[1]+old_rgba_arr[2])/3);
+                for(let i=0;i<800*600*4;i+=4){
+                    //let novi_rgba=dominantColour(old_rgba_arr[i],old_rgba_arr[i+1],old_rgba_arr[i+2],old_rgba_arr[i+3])
+                   //let novi_rgba=vignette(old_rgba_arr[i],old_rgba_arr[i+1],old_rgba_arr[i+2],old_rgba_arr[i+3],i);
+                    /*   let novi_rgba=dithering2(error,old_rgba_arr[i],old_rgba_arr[i+1],old_rgba_arr[i+2],old_rgba_arr[i+3]);
+                       //let novi_rgba=dithering(old_rgba_arr[i],old_rgba_arr[i+1],old_rgba_arr[i+2],old_rgba_arr[i+3])
+                 // let a={old_rgba_arr[i], old_rgba_arr[i+4],old_rgba_arr[i+8]};
+                   error=novi_rgba.e;
+                    let from0=error;
+                    let from255=255-error;
+                    if(from0<from255){
+                        error-=0;
+                    }else{
+                        error-=255;
+                    }
+                   // console.log(error);*/
+                    new_rgba_arr[i]=novi_rgba.r;
+                    new_rgba_arr[i+1]=novi_rgba.g;
+                    new_rgba_arr[i+2]=novi_rgba.b;
+                    new_rgba_arr[i+3]=novi_rgba.a;
+                }
+                let a=getLog(2,1024);
+                console.log(a);
+                let new_data=new ImageData(new Uint8ClampedArray(new_rgba_arr),800,600);
+                context.putImageData(new_data,0,0);
+                console.log(new_data.data);
+            }
+        }
+    </script>
+</head>
+<body onload="onBodyLoad()" >
+  <!--  <h1>Vish kolko e gotina biskvitkata ot Cookie Clicker!</h1>
+    <hr>
+    <img src=580b57fbd9996e24bc43c0fc.png width="300px"/>-->
+    <canvas width="800px" height="600px" id="my-canvas"></canvas>
+</body>
+</html>
